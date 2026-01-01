@@ -36,7 +36,7 @@ const issue7978JSONSchema = `{
       "items": { "type": "number" }
     },
     "booleans": {
-      "type": "array", 
+      "type": "array",
       "items": { "type": "boolean" }
     },
     "mixed": {
@@ -101,5 +101,47 @@ func TestSchemaToGrammar(t *testing.T) {
 				t.Errorf("grammar = %q, want %q", g, c.prefix)
 			}
 		})
+	}
+}
+
+// TestPatternWithMinMaxLength tests that when both pattern and minLength/maxLength
+// are specified, the grammar correctly enforces both constraints.
+// This is a regression test for the bug where minLength was ignored when pattern was present.
+func TestPatternWithMinMaxLength(t *testing.T) {
+	schema := `{
+		"type": "object",
+		"properties": {
+			"name": {
+				"type": "string",
+				"pattern": "^[a-zA-Z]+$",
+				"minLength": 10,
+				"maxLength": 25
+			}
+		},
+		"required": ["name"]
+	}`
+
+	g := SchemaToGrammar([]byte(schema))
+	if g == nil {
+		t.Fatal("failed to convert JSON schema to grammar")
+	}
+
+	grammarStr := string(g)
+	t.Logf("Generated grammar:\n%s", grammarStr)
+
+	// The grammar should contain {10,25} quantifier for the pattern
+	// Before the fix, it would have just + (unbounded)
+	if !strings.Contains(grammarStr, "{10,25}") {
+		t.Errorf("grammar should contain {10,25} quantifier for minLength=10, maxLength=25")
+		t.Errorf("This indicates minLength/maxLength are being ignored when pattern is present")
+	}
+
+	// Should NOT contain unbounded + for the letter pattern
+	// (the pattern [a-zA-Z]+ should become [a-zA-Z]{10,25})
+	lines := strings.Split(grammarStr, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "[a-zA-Z]+") && !strings.Contains(line, "{") {
+			t.Errorf("found unbounded [a-zA-Z]+ pattern, should be bounded: %s", line)
+		}
 	}
 }
