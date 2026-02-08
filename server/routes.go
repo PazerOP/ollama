@@ -675,15 +675,30 @@ func (s *Server) TokenizeHandler(c *gin.Context) {
 
 	checkpointLoaded := time.Now()
 
-	tokens, err := r.Tokenize(c.Request.Context(), req.Content)
+	ctx := c.Request.Context()
+
+	tokens, err := r.Tokenize(ctx, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Detokenize each token individually to get per-token text pieces
+	pieces := make([]string, len(tokens))
+	for i, tok := range tokens {
+		piece, err := r.Detokenize(ctx, []int{tok})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		pieces[i] = piece
+	}
+
 	c.JSON(http.StatusOK, api.TokenizeResponse{
 		Model:         req.Model,
 		Tokens:        tokens,
+		Count:         len(tokens),
+		Pieces:        pieces,
 		TotalDuration: time.Since(checkpointStart),
 		LoadDuration:  checkpointLoaded.Sub(checkpointStart),
 	})

@@ -628,6 +628,13 @@ type TokenizeResponse struct {
 	Model  string `json:"model"`
 	Tokens []int  `json:"tokens"`
 
+	// Count is the number of tokens.
+	Count int `json:"count"`
+
+	// Pieces is the text representation of each token, parallel to Tokens.
+	// Pieces[i] is the text that token Tokens[i] represents.
+	Pieces []string `json:"pieces"`
+
 	TotalDuration time.Duration `json:"total_duration,omitempty"`
 	LoadDuration  time.Duration `json:"load_duration,omitempty"`
 }
