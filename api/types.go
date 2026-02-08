@@ -607,6 +607,56 @@ type Runner struct {
 	NumThread int   `json:"num_thread,omitempty"`
 }
 
+// TokenizeRequest is the request passed to [Client.Tokenize].
+type TokenizeRequest struct {
+	// Model is the model name.
+	Model string `json:"model"`
+
+	// Content is the text to tokenize.
+	Content string `json:"content"`
+
+	// KeepAlive controls how long the model will stay loaded in memory following
+	// this request.
+	KeepAlive *Duration `json:"keep_alive,omitempty"`
+
+	// Options lists model-specific options.
+	Options map[string]any `json:"options"`
+}
+
+// TokenizeResponse is the response from [Client.Tokenize].
+type TokenizeResponse struct {
+	Model  string `json:"model"`
+	Tokens []int  `json:"tokens"`
+
+	TotalDuration time.Duration `json:"total_duration,omitempty"`
+	LoadDuration  time.Duration `json:"load_duration,omitempty"`
+}
+
+// DetokenizeRequest is the request passed to [Client.Detokenize].
+type DetokenizeRequest struct {
+	// Model is the model name.
+	Model string `json:"model"`
+
+	// Tokens is the list of token IDs to detokenize.
+	Tokens []int `json:"tokens"`
+
+	// KeepAlive controls how long the model will stay loaded in memory following
+	// this request.
+	KeepAlive *Duration `json:"keep_alive,omitempty"`
+
+	// Options lists model-specific options.
+	Options map[string]any `json:"options"`
+}
+
+// DetokenizeResponse is the response from [Client.Detokenize].
+type DetokenizeResponse struct {
+	Model   string `json:"model"`
+	Content string `json:"content"`
+
+	TotalDuration time.Duration `json:"total_duration,omitempty"`
+	LoadDuration  time.Duration `json:"load_duration,omitempty"`
+}
+
 // EmbedRequest is the request passed to [Client.Embed].
 type EmbedRequest struct {
 	// Model is the model name.
