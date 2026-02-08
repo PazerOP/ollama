@@ -932,7 +932,35 @@ public:
                 return _add_rule(rule_name, "\"[\" space " + build_repetition(item_rule_name, min_items, max_items, "\",\" space") + " \"]\" space");
             }
         } else if ((schema_type.is_null() || schema_type == "string") && schema.contains("pattern")) {
-            return _visit_pattern(schema["pattern"], rule_name);
+            std::string pattern = schema["pattern"].get<std::string>();
+
+            // If minLength or maxLength are also specified, try to incorporate them into the pattern
+            if (schema.contains("minLength") || schema.contains("maxLength")) {
+                int min_len = schema.contains("minLength") ? schema["minLength"].get<int>() : 0;
+                int max_len = schema.contains("maxLength") ? schema["maxLength"].get<int>() : std::numeric_limits<int>::max();
+
+                // For patterns ending with + or *, replace with {min,max} quantifier
+                // Pattern format: ^...(+|*)$ where the quantifier applies to the last element
+                if (pattern.length() >= 3 && pattern.front() == '^' && pattern.back() == '$') {
+                    char second_last = pattern[pattern.length() - 2];
+                    if (second_last == '+' || second_last == '*') {
+                        // Replace the quantifier with {min,max}
+                        // For '+', the pattern already requires at least 1, so min_len should be at least 1
+                        if (second_last == '+' && min_len < 1) {
+                            min_len = 1;
+                        }
+                        std::string quantifier;
+                        if (max_len == std::numeric_limits<int>::max()) {
+                            quantifier = "{" + std::to_string(min_len) + ",}";
+                        } else {
+                            quantifier = "{" + std::to_string(min_len) + "," + std::to_string(max_len) + "}";
+                        }
+                        pattern = pattern.substr(0, pattern.length() - 2) + quantifier + "$";
+                    }
+                }
+            }
+
+            return _visit_pattern(pattern, rule_name);
         } else if ((schema_type.is_null() || schema_type == "string") && std::regex_match(schema_format, std::regex("^uuid[1-5]?$"))) {
             return _add_primitive(rule_name == "root" ? "root" : schema_format, PRIMITIVE_RULES.at("uuid"));
         } else if ((schema_type.is_null() || schema_type == "string") && STRING_FORMAT_RULES.find(schema_format + "-string") != STRING_FORMAT_RULES.end()) {
